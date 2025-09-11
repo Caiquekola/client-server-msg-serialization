@@ -1,24 +1,35 @@
 package com.caiquekola.csv;
 
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvException;
+
 public class LeituraCsv {   
 	public static List<String[]> lerCsv(String caminhoArquivo){
         List<String[]> dados = new ArrayList<>();
         
-        try {
-            List<String> linhas = Files.readAllLines(Paths.get(caminhoArquivo));
-            for(String linha:linhas){
-                String[] valores = linha.split(",");
-                dados.add(valores);
+        try (CSVReader reader = new CSVReader(new FileReader(caminhoArquivo))){
+            List<String[]> linhas = reader.readAll();
+            for(String[] linha: linhas){
+                for(String valor:linha){
+                    System.out.print(valor +" ");
+                }
+                System.out.println();
             }
-        } catch (IOException e) {
+        } catch (IOException | CsvException e) {
             e.printStackTrace();
         }
         return dados;
+    }
+
+    public static void main(String[] args) {
+        String caminho = "dados.csv";
+        lerCsv(caminho);
     }
 }
