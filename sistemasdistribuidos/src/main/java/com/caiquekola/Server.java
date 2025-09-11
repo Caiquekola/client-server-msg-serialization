@@ -27,29 +27,24 @@ public class Server {
             ObjectInputStream entrada = new ObjectInputStream(cliente.getInputStream());
 
             List<String[]> dadosCliente = (List<String[]>) entrada.readObject();
-            criarArquivosSerializacao(dadosCliente);
-            dadosCliente.stream().forEach(linha -> {
-                for (String celula : linha) {
-                    System.out.print(celula + ",");
-                }
-                System.out.println();
-            });
+            String caminhos[] = criarArquivosSerializacao(dadosCliente);
+            saida.writeObject(caminhos);
 
             entrada.close();
             saida.close();
             cliente.close();
-
         }
     }
 
-    public static void criarArquivosSerializacao(List<String[]> dadosCliente) {
+    public static String[] criarArquivosSerializacao(List<String[]> dadosCliente) {
         String caminho = "sistemasdistribuidos\\\\src\\\\main\\\\java\\\\com\\\\caiquekola\\\\dados\\\\dados";
-        EscritaCsv.escreverCsv(caminho + ".csv", dadosCliente);
-        EscritaJson.escreverJson(dadosCliente, caminho+".json");
-        EscritaXML.escreverXML(dadosCliente,caminho+".xml");
-        EscritaYAML.escreverYAML(dadosCliente,caminho+".yaml");
-        EscritaTOML.escreverTOML(dadosCliente,caminho+".toml");
-        
-
+        String tipos[] = {".csv",".json",".xml",".yaml",".toml"};
+        String caminhos[] = {caminho+tipos[0],caminho+tipos[1],caminho+tipos[2],caminho+tipos[3],caminho+tipos[4]};
+        EscritaCsv.escreverCsv(caminhos[0], dadosCliente);
+        EscritaJson.escreverJson(dadosCliente, caminhos[1]);
+        EscritaXML.escreverXML(dadosCliente,caminhos[2]);
+        EscritaYAML.escreverYAML(dadosCliente,caminhos[3]);
+        EscritaTOML.escreverTOML(dadosCliente,caminhos[4]);
+        return caminhos;
     }
 }

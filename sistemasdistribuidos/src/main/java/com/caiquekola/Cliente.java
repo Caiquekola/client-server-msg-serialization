@@ -17,27 +17,20 @@ public class Cliente {
 
     public static void main(String[] args) throws UnknownHostException, IOException, ClassNotFoundException {
         cliente = new Socket("localhost", portaServidor);
-        List<String[]> dados = inserirDados();
-        enviarDadosServer(dados);
-
-        cliente.close();
-    }
-
-    public static void enviarDadosServer(List<String[]> dados)
-            throws UnknownHostException, IOException, ClassNotFoundException {
         ObjectInputStream entrada = new ObjectInputStream(cliente.getInputStream());
         ObjectOutputStream saida = new ObjectOutputStream(cliente.getOutputStream());
 
-        //Comunicação cliente -> servidor
+        List<String[]> dados = inserirDados();
         saida.writeObject(dados);
         saida.flush();
         System.out.println("Dados enviados");
+        String[] caminhos = (String[])entrada.readObject();
 
 
-        
         saida.close();
         entrada.close();
         System.out.println("Conexão encerrada");
+        cliente.close();
     }
 
     public static List<String[]> inserirDados() {
