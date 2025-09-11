@@ -1,5 +1,6 @@
 package com.caiquekola.csv;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -8,9 +9,10 @@ import java.util.List;
 import com.opencsv.CSVWriter;
 
 public class EscritaCsv {
-    public static void escreverCsv(String caminhoArquivo, List<String[]> dados){
+    public static void escreverCsv(String caminhoArquivo, List<String[]> dados) {
         try (CSVWriter writer = new CSVWriter(new FileWriter(caminhoArquivo))) {
-            for(String[] linha: dados){
+
+            for (String[] linha : dados) {
                 writer.writeNext(linha);
             }
         } catch (IOException e) {
@@ -26,7 +28,7 @@ public class EscritaCsv {
         dados.add(cabecalho);
         dados.add(linha1);
         dados.add(linha2);
-        escreverCsv("dados.csv",dados);
-
+        escreverCsv("sistemasdistribuidos\\src\\main\\java\\com\\caiquekola\\dados\\dados.csv", dados);
+      
     }
 }

@@ -23,17 +23,18 @@ public class Cliente {
         cliente.close();
     }
 
-    public static void enviarDadosServer(List<String[]> dados) throws UnknownHostException, IOException, ClassNotFoundException {
+    public static void enviarDadosServer(List<String[]> dados)
+            throws UnknownHostException, IOException, ClassNotFoundException {
         ObjectInputStream entrada = new ObjectInputStream(cliente.getInputStream());
         ObjectOutputStream saida = new ObjectOutputStream(cliente.getOutputStream());
 
-        // Teste para comunicação
-        Date data_atual = (Date) entrada.readObject();
-        JOptionPane.showMessageDialog(null, "Data recebida do servidor" + data_atual, "Mensagem do servidor",
-                JOptionPane.CANCEL_OPTION);
+        //Comunicação cliente -> servidor
         saida.writeObject(dados);
         saida.flush();
         System.out.println("Dados enviados");
+
+
+        
         saida.close();
         entrada.close();
         System.out.println("Conexão encerrada");

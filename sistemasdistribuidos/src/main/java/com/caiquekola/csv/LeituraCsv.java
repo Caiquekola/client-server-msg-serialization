@@ -17,8 +17,11 @@ public class LeituraCsv {
         try (CSVReader reader = new CSVReader(new FileReader(caminhoArquivo))){
             List<String[]> linhas = reader.readAll();
             for(String[] linha: linhas){
-                for(String valor:linha){
-                    System.out.print(valor +" ");
+                for(int i =0; i < linha.length; i++){
+                    System.out.print(linha[i]);
+                    if(i<linha.length-1){
+                        System.out.print(",");
+                    }
                 }
                 System.out.println();
             }
