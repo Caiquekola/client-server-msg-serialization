@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.List;
 
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 
 public class Cliente {
     private final static int portaServidor = 2304;
@@ -31,6 +32,10 @@ public class Cliente {
         entrada.close();
         System.out.println("Conexão encerrada");
         cliente.close();
+
+        SwingUtilities.invokeLater(() -> {
+            com.caiquekola.ui.VisualizadorArquivos.exibirArquivosEmJanela(caminhos);
+        });
     }
 
     public static List<String[]> inserirDados() {
