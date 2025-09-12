@@ -1,54 +1,98 @@
 package com.caiquekola;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.StringWriter;
 import java.net.Socket;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
-import javax.swing.JOptionPane;
-import javax.swing.SwingUtilities;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.io.Serializable;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.moandjiezana.toml.TomlWriter;
+import com.opencsv.CSVWriter;
+import org.yaml.snakeyaml.Yaml;
 
 public class Cliente {
-    private final static int portaServidor = 2304;
-    private static Socket cliente;
 
-    public static void main(String[] args) throws UnknownHostException, IOException, ClassNotFoundException {
-        cliente = new Socket("localhost", portaServidor);
-        ObjectInputStream entrada = new ObjectInputStream(cliente.getInputStream());
-        ObjectOutputStream saida = new ObjectOutputStream(cliente.getOutputStream());
+    public static final String HOST = "127.0.0.1";
+    public static final int PORTA = 9009;
 
-        List<String[]> dados = inserirDados();
-        saida.writeObject(dados);
-        saida.flush();
-        System.out.println("Dados enviados");
-        String[] caminhos = (String[])entrada.readObject();
+    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final XmlMapper XML = new XmlMapper();
+    private static final Yaml YAML = new Yaml();
+    private static final TomlWriter TOML = new TomlWriter();
 
+    public static void main(String[] args) throws Exception {
+        Dados dados = new Dados(
+                "Caique Augusto de Aquino Braga",
+                "123.456.789-00",
+                20,
+                "Mensagem muito interressante aqui!"
+        );
 
-        saida.close();
-        entrada.close();
-        System.out.println("Conexão encerrada");
-        cliente.close();
+        String conteudoCSV  = dumpCSV(dados);
+        String conteudoJSON = JSON.writeValueAsString(dados);
+        String conteudoXML  = XML.writeValueAsString(dados);
+        String conteudoYAML = YAML.dump(beanToMap(dados));
+        String conteudoTOML = TOML.write(beanToMap(dados));
 
-        SwingUtilities.invokeLater(() -> {
-            com.caiquekola.ui.VisualizadorArquivos.exibirArquivosEmJanela(caminhos);
-        });
+        try (Socket cliente = new Socket(HOST, PORTA)) {
+            DataOutputStream saida = new DataOutputStream(cliente.getOutputStream());
+            DataInputStream  entrada = new DataInputStream(cliente.getInputStream());
+
+            enviar(saida, "CSV",  conteudoCSV);
+            enviar(saida, "JSON", conteudoJSON);
+            enviar(saida, "XML",  conteudoXML);
+            enviar(saida, "YAML", conteudoYAML);
+            enviar(saida, "TOML", conteudoTOML);
+
+            System.out.println("Servidor: " + entrada.readUTF());
+        }
     }
 
-    public static List<String[]> inserirDados() {
-        String nome = JOptionPane.showInputDialog("Insira seu nome: ");
-        String cpf = JOptionPane.showInputDialog("Insira seu CPF: ");
-        byte idade = Byte.valueOf(JOptionPane.showInputDialog("Insira sua idade: "));
-        String mensagem = JOptionPane.showInputDialog("Insira a mensagem: ");
+    private static void enviar(DataOutputStream saida, String formato, String conteudo) throws Exception {
+        saida.writeUTF(formato);
+        saida.writeUTF(conteudo);
+        saida.flush();
+        System.out.println();
+    }
 
-        String cabecalho[] = { "Nome", "CPF", "Idade", "Mensagem" };
-        String respostas[] = { nome, cpf, String.valueOf(idade), mensagem };
-        List<String[]> dados = new ArrayList<>();
-        dados.add(cabecalho);
-        dados.add(respostas);
-        return dados;
+
+    private static String dumpCSV(Dados d) throws Exception {
+        StringWriter sw = new StringWriter();
+        try (CSVWriter w = new CSVWriter(sw)) {
+            w.writeNext(new String[]{"nome", "cpf", "idade", "mensagem"});
+            w.writeNext(new String[]{d.nome, d.cpf, String.valueOf(d.idade), d.mensagem});
+        }
+        return sw.toString();
+    }
+
+    private static Map<String, Object> beanToMap(Dados d) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("nome", d.nome);
+        m.put("cpf", d.cpf);
+        m.put("idade", d.idade);
+        m.put("mensagem", d.mensagem);
+        return m;
+    }
+}
+
+
+
+@JacksonXmlRootElement(localName = "dados")
+class Dados implements Serializable {
+    public String nome;
+    public String cpf;
+    public int idade;
+    public String mensagem;
+
+    public Dados() {}
+    public Dados(String nome, String cpf, int idade, String mensagem) {
+        this.nome = nome;
+        this.cpf = cpf;
+        this.idade = idade;
+        this.mensagem = mensagem;
     }
 }
