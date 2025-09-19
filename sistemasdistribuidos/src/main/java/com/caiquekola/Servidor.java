@@ -2,38 +2,35 @@ package com.caiquekola;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.StringReader;
-import java.io.StringWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-
-import org.w3c.dom.Document;
-import org.yaml.snakeyaml.DumperOptions;
-import org.yaml.snakeyaml.Yaml;
-
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.moandjiezana.toml.Toml;
-import com.moandjiezana.toml.TomlWriter;
-import com.opencsv.CSVReader;
-import com.opencsv.CSVWriter;
+
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
+
+import com.fasterxml.jackson.dataformat.csv.CsvMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+
+import com.fasterxml.jackson.dataformat.toml.TomlMapper;
 
 public class Servidor {
 
     public static final String HOST = "127.0.0.1";
     public static final int PORTA = 9009;
 
-    private static final ObjectMapper JSON = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
-    private static final XmlMapper XML = new XmlMapper();
+    private static final ObjectMapper JSON   = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+    private static final XmlMapper XML       = (XmlMapper) new XmlMapper().enable(SerializationFeature.INDENT_OUTPUT);
+    private static final YAMLMapper YAML     = (YAMLMapper) new YAMLMapper().enable(SerializationFeature.INDENT_OUTPUT);
+    private static final CsvMapper CSV       = new CsvMapper();
+    private static final TomlMapper TOML     = new TomlMapper(); 
 
     public static void main(String[] args) throws Exception {
         try (ServerSocket servidor = new ServerSocket(PORTA)) {
@@ -67,50 +64,28 @@ public class Servidor {
         }
     }
 
-
     private static String loadJson(String raw) {
         try {
-            var node = JSON.readTree(raw);               // load
-            return JSON.writeValueAsString(node);        // dump 
+            JsonNode node = JSON.readTree(raw);
+            return JSON.writeValueAsString(node);
         } catch (Exception e) {
-            return raw; 
+            return raw;
         }
     }
 
     private static String loadXml(String raw) {
         try {
-            Document doc = DocumentBuilderFactory.newInstance()
-                    .newDocumentBuilder()
-                    .parse(new org.xml.sax.InputSource(new StringReader(raw)));
-            doc.getDocumentElement().normalize();
-
-            var tf = TransformerFactory.newInstance().newTransformer();
-            tf.setOutputProperty(OutputKeys.INDENT, "yes");
-            tf.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-
-            StringWriter sw = new StringWriter();
-            tf.transform(new DOMSource(doc), new StreamResult(sw));     // dump 
-            return sw.toString();
+            JsonNode node = XML.readTree(raw.getBytes()); // load
+            return XML.writerWithDefaultPrettyPrinter().writeValueAsString(node); // dump
         } catch (Exception e) {
-            try {
-                Object bean = XML.readValue(raw, Object.class);
-                return XML.writerWithDefaultPrettyPrinter().writeValueAsString(bean);
-            } catch (Exception ignore) {
-                return raw;
-            }
+            return raw;
         }
     }
 
     private static String loadYaml(String raw) {
         try {
-            Yaml loader = new Yaml();                     // load
-            Object obj = loader.load(raw);
-
-            DumperOptions op = new DumperOptions();       // dump 
-            op.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
-            op.setPrettyFlow(true);
-            Yaml dumper = new Yaml(op);
-            return dumper.dump(obj);
+            JsonNode node = YAML.readTree(raw); // load
+            return YAML.writeValueAsString(node); // dump
         } catch (Exception e) {
             return raw;
         }
@@ -118,22 +93,27 @@ public class Servidor {
 
     private static String loadToml(String raw) {
         try {
-            Map<String, Object> map = new Toml().read(raw).toMap(); // load
-            TomlWriter writer = new TomlWriter();                   // dump
-            return writer.write(map);
+            JsonNode node = TOML.readTree(raw); // load
+            return TOML.writeValueAsString(node); // dump
         } catch (Exception e) {
             return raw;
         }
     }
 
     private static String loadCsv(String raw) {
-        try (CSVReader reader = new CSVReader(new StringReader(raw))) {
-            List<String[]> rows = reader.readAll();  // load
-            StringWriter sw = new StringWriter();
-            try (CSVWriter writer = new CSVWriter(sw)) {
-                writer.writeAll(rows);               // dump
+        try {
+            CsvSchema readSchema = CsvSchema.emptySchema().withHeader();
+            List<Map<String, String>> rows =
+                    CSV.readerFor(Map.class).with(readSchema).readValue(raw);
+
+            if (rows.isEmpty()) return "";
+            CsvSchema.Builder b = CsvSchema.builder();
+            for (String col : rows.get(0).keySet()) {
+                b.addColumn(col);
             }
-            return sw.toString();
+            CsvSchema writeSchema = b.setUseHeader(true).build();
+
+            return CSV.writer(writeSchema).writeValueAsString(rows);
         } catch (Exception e) {
             return raw;
         }

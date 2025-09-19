@@ -2,17 +2,16 @@ package com.caiquekola;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.StringWriter;
 import java.net.Socket;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.io.Serializable;
+import com.fasterxml.jackson.dataformat.toml.TomlMapper;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.moandjiezana.toml.TomlWriter;
-import com.opencsv.CSVWriter;
-import org.yaml.snakeyaml.Yaml;
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 
 public class Cliente {
 
@@ -21,33 +20,32 @@ public class Cliente {
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final XmlMapper XML = new XmlMapper();
-    private static final Yaml YAML = new Yaml();
-    private static final TomlWriter TOML = new TomlWriter();
-
+    private static final YAMLMapper YAML = new YAMLMapper();
+    private static final CsvMapper CSV = new CsvMapper();
+    private static final TomlMapper TOML = new TomlMapper();
     public static void main(String[] args) throws Exception {
         Dados dados = new Dados(
                 "Caique Augusto de Aquino Braga",
                 "123.456.789-00",
                 20,
-                "Mensagem muito interressante aqui!"
+                "Mensagem muito interessante aqui!"
         );
 
-        String conteudoCSV  = dumpCSV(dados);
+        CsvSchema schema = CSV.schemaFor(Dados.class).withHeader();
+        String conteudoCSV = CSV.writer(schema).writeValueAsString(dados);
         String conteudoJSON = JSON.writeValueAsString(dados);
-        String conteudoXML  = XML.writeValueAsString(dados);
-        String conteudoYAML = YAML.dump(beanToMap(dados));
-        String conteudoTOML = TOML.write(beanToMap(dados));
-
+        String conteudoXML = XML.writeValueAsString(dados);
+        String conteudoYAML = YAML.writeValueAsString(dados);
+        String conteudoTOML = TOML.writeValueAsString(dados);
         try (Socket cliente = new Socket(HOST, PORTA)) {
             DataOutputStream saida = new DataOutputStream(cliente.getOutputStream());
-            DataInputStream  entrada = new DataInputStream(cliente.getInputStream());
+            DataInputStream entrada = new DataInputStream(cliente.getInputStream());
 
-            enviar(saida, "CSV",  conteudoCSV);
+            enviar(saida, "CSV", conteudoCSV);
             enviar(saida, "JSON", conteudoJSON);
-            enviar(saida, "XML",  conteudoXML);
+            enviar(saida, "XML", conteudoXML);
             enviar(saida, "YAML", conteudoYAML);
-            enviar(saida, "TOML", conteudoTOML);
-
+            enviar(saida,"TOML",conteudoTOML);
             System.out.println("Servidor: " + entrada.readUTF());
         }
     }
@@ -56,32 +54,12 @@ public class Cliente {
         saida.writeUTF(formato);
         saida.writeUTF(conteudo);
         saida.flush();
-        System.out.println();
-    }
-
-
-    private static String dumpCSV(Dados d) throws Exception {
-        StringWriter sw = new StringWriter();
-        try (CSVWriter w = new CSVWriter(sw)) {
-            w.writeNext(new String[]{"nome", "cpf", "idade", "mensagem"});
-            w.writeNext(new String[]{d.nome, d.cpf, String.valueOf(d.idade), d.mensagem});
-        }
-        return sw.toString();
-    }
-
-    private static Map<String, Object> beanToMap(Dados d) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("nome", d.nome);
-        m.put("cpf", d.cpf);
-        m.put("idade", d.idade);
-        m.put("mensagem", d.mensagem);
-        return m;
+        System.out.println("Enviado: " + formato);
     }
 }
 
-
-
 @JacksonXmlRootElement(localName = "dados")
+@JsonPropertyOrder({"nome", "cpf", "idade", "mensagem"}) 
 class Dados implements Serializable {
     public String nome;
     public String cpf;
